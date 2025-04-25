@@ -51,7 +51,7 @@ jobs:
               - name: Install jq
                 run: sudo apt-get install -y jq
         
-              - name: Validate jest-results.json exists
+              - name: Validate jest-test-results.json exists
                 run: |
                   if [ ! -f jest-results.json ]; then
                     echo "jest-results.json not found!"
@@ -60,7 +60,7 @@ jobs:
         
               - name: Prepare and Send Test Results to AI
                 run: |
-                  PROMPT=$(jq -Rs '.' < jest-results.json)
+                  PROMPT=$(jq -Rs '.' < jest-test-results.json)
                   echo '{
                     "model": "llama3.2:latest",
                     "prompt": "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n'"$PROMPT"'",
