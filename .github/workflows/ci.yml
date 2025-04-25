@@ -36,33 +36,43 @@ jobs:
           path: jest-results.json
 
   ai-analysis:
-    needs: test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download Jest Test Results
-        uses: actions/download-artifact@v4
-        with:
-          name: jest-test-results
-
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
-      - name: Prepare and Send Test Results to AI
-        run: |
-          PROMPT=$(jq -Rs '.' < jest-results.json)
-          echo '{
-            "model": "llama3.2:latest",
-            "prompt": "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n'"$PROMPT"'",
-            "stream": false
-          }' > prompt.json
-
-          curl -s -X POST http://localhost:11434/api/generate \
-            -H "Content-Type: application/json" \
-            -d @prompt.json > ai-analysis-result.json
-
-      - name: Output AI Analysis
-        run: cat ai-analysis-result.json
+            needs: test
+            runs-on: ubuntu-latest
+        
+            steps:
+              - name: Download Jest Test Results
+                uses: actions/download-artifact@v3
+                with:
+                  name: jest-test-results
+        
+              - name: List downloaded files (debugging)
+                run: ls -lah
+        
+              - name: Install jq
+                run: sudo apt-get install -y jq
+        
+              - name: Validate jest-results.json exists
+                run: |
+                  if [ ! -f jest-results.json ]; then
+                    echo "jest-results.json not found!"
+                    exit 1
+                  fi
+        
+              - name: Prepare and Send Test Results to AI
+                run: |
+                  PROMPT=$(jq -Rs '.' < jest-results.json)
+                  echo '{
+                    "model": "llama3.2:latest",
+                    "prompt": "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n'"$PROMPT"'",
+                    "stream": false
+                  }' > prompt.json
+        
+                  curl -s -X POST http://localhost:11434/api/generate \
+                    -H "Content-Type: application/json" \
+                    -d @prompt.json > ai-analysis-result.json
+        
+              - name: Output AI Analysis
+                run: cat ai-analysis-result.json
 
   notify:
     needs: ai-analysis
