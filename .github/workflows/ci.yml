@@ -53,8 +53,8 @@ jobs:
         
               - name: Validate jest-test-results.json exists
                 run: |
-                  if [ ! -f jest-results.json ]; then
-                    echo "jest-results.json not found!"
+                  if [ ! -f jest-test-results.json ]; then
+                    echo "jest-test-results.json not found!"
                     exit 1
                   fi
         
