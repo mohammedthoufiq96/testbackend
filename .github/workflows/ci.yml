@@ -1,0 +1,72 @@
+name: CI/CD Pipeline with Test Analysis
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install dependencies
+        run: |
+          npm install
+
+      - name: Run Jest Tests
+        id: jest-tests
+        run: |
+          npm run test -- --json --outputFile=jest-results.json
+
+      - name: Upload Jest Test Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: jest-test-results
+          path: jest-results.json
+
+#   ai-analysis:
+#     needs: test
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Download Jest Test Results
+#         uses: actions/download-artifact@v2
+#         with:
+#           name: jest-test-results
+
+#       - name: Analyze Test Results with AI
+#         run: |
+#           # Send the test results to an AI model for analysis (replace with your model's API or local service)
+#           curl -X POST http://localhost:11434/api/analyze -H "Content-Type: application/json" -d @jest-results.json > ai-analysis-result.json
+
+#       - name: Comment on PR with AI Analysis
+#         run: |
+#           # Get the analysis result and comment on the PR
+#           AI_ANALYSIS=$(cat ai-analysis-result.json)
+#           curl -X POST \
+#             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+#             -d "{\"body\": \"AI Analysis Results: $AI_ANALYSIS\"}" \
+#             https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
+
+#   notify:
+#     needs: ai-analysis
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Send Slack Notification for Test Results
+#         if: failure()
+#         run: |
+#           curl -X POST -H 'Content-type: application/json' \
+#           --data '{"text": "Test failed! Please check the CI pipeline for more details."}' \
+#           ${{ secrets.SLACK_WEBHOOK_URL }}
