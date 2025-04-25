@@ -45,22 +45,25 @@ jobs:
                 with:
                   name: jest-test-results
         
-              - name: List downloaded files (debugging)
-                run: ls -lah
+              - name: List downloaded files
+                run: find . -type f
+        
+              - name: Move jest-results.json to root
+                run: mv jest-test-results/jest-results.json ./
         
               - name: Install jq
                 run: sudo apt-get install -y jq
         
-              - name: Validate jest-test-results.json exists
+              - name: Validate jest-results.json exists
                 run: |
-                  if [ ! -f jest-test-results.json ]; then
-                    echo "jest-test-results.json not found!"
+                  if [ ! -f jest-results.json ]; then
+                    echo "jest-results.json not found!"
                     exit 1
                   fi
         
               - name: Prepare and Send Test Results to AI
                 run: |
-                  PROMPT=$(jq -Rs '.' < jest-test-results.json)
+                  PROMPT=$(jq -Rs '.' < jest-results.json)
                   echo '{
                     "model": "llama3.2:latest",
                     "prompt": "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n'"$PROMPT"'",
@@ -73,6 +76,7 @@ jobs:
         
               - name: Output AI Analysis
                 run: cat ai-analysis-result.json
+        
 
   notify:
     needs: ai-analysis
