@@ -41,26 +41,33 @@ jobs:
 
     steps:
       - name: Download Jest Test Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: jest-test-results
 
-      - name: Analyze Test Results with AI
-        run: |
-          # Send the test results to an AI model for analysis (replace with your model's API or local service)
-          curl -X POST http://localhost:11434/api/analyze -H "Content-Type: application/json" -d @jest-results.json > ai-analysis-result.json
+      - name: Install jq
+        run: sudo apt-get install -y jq
 
-      - name: Comment on PR with AI Analysis
+      - name: Prepare and Send Test Results to AI
         run: |
-          AI_ANALYSIS=$(cat ai-analysis-result.json)
-          curl -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -d "{\"body\": \"AI Analysis Results: $AI_ANALYSIS\"}" \
-            https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
+          PROMPT=$(jq -Rs '.' < jest-results.json)
+          echo '{
+            "model": "llama3.2:latest",
+            "prompt": "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n'"$PROMPT"'",
+            "stream": false
+          }' > prompt.json
+
+          curl -s -X POST http://localhost:11434/api/generate \
+            -H "Content-Type: application/json" \
+            -d @prompt.json > ai-analysis-result.json
+
+      - name: Output AI Analysis
+        run: cat ai-analysis-result.json
 
   notify:
     needs: ai-analysis
     runs-on: ubuntu-latest
+
     steps:
       - name: Send Slack Notification for Test Results
         if: failure()
