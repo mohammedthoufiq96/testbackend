@@ -21,16 +21,8 @@ jobs:
         with:
           node-version: '16'
 
-      - name: Cache Node.js modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
-
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run Jest Tests
         id: jest-tests
@@ -38,7 +30,7 @@ jobs:
           npm run test -- --json --outputFile=jest-results.json
 
       - name: Upload Jest Test Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: jest-test-results
           path: jest-results.json
@@ -60,7 +52,6 @@ jobs:
 
       - name: Comment on PR with AI Analysis
         run: |
-          # Get the analysis result and comment on the PR
           AI_ANALYSIS=$(cat ai-analysis-result.json)
           curl -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
