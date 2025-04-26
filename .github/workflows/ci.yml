@@ -57,7 +57,7 @@ jobs:
                 --argjson stream false \
                 '{model: $model, prompt: $prompt, stream: $stream}' > prompt.json
 
-           curl -s -X POST http://localhost:11434/api/generate \
+           curl -s -X POST https://2daf-14-99-175-222.ngrok-free.app/api/generate \
             -H "Content-Type: application/json" \
             -d @prompt.json > ai-analysis-result.json
 
