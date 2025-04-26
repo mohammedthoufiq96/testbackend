@@ -124,6 +124,6 @@ jobs:
                   PAYLOAD=$(jq -n --arg text "$STATUS\n\nAI Code Suggestions:\n$ESCAPED_ANALYSIS" '{text: $text}')
         
                   # Send to Slack
-                  curl --location "${{ secrets.SLACK_WEBHOOK_URL }}" \
+                    curl -v -X POST https://604b-14-99-175-222.ngrok-free.app/api/sendnotfication/ \
                        --header 'Content-type: application/json' \
                        --data "$PAYLOAD"
