@@ -85,45 +85,45 @@ jobs:
           path: ai-analysis-result.json
 
   notify:
-    needs: [test, ai-analysis]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-      - name: Download AI Analysis Result
-        uses: actions/download-artifact@v4
-        with:
-          name: ai-analysis-result
-
-      - name: Read AI Analysis
-        id: analysis
-        run: |
-          echo "Reading AI analysis..."
-          {
-            echo "analysis_output<<EOF"
-            cat ai-analysis-result.json
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Send Slack Notification
-        env:
-          ANALYSIS_RESULT: ${{ steps.analysis.outputs.analysis_output }}
-        run: |
-          STATUS="✅ All tests passed!"
-          if [ "${{ needs.test.result }}" == "failure" ]; then
-            STATUS="🚨 Some tests failed!"
-          fi
-
-          # Truncate analysis if too long
-          TRUNCATED_ANALYSIS=$(echo "$ANALYSIS_RESULT" | head -c 2800)
-
-          # Escape newlines and quotes for JSON
-          ESCAPED_ANALYSIS=$(echo "$TRUNCATED_ANALYSIS" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g')
-
-          # Create Slack message payload
-          PAYLOAD=$(jq -n --arg text "$STATUS\n\nAI Code Suggestions:\n$ESCAPED_ANALYSIS" '{text: $text}')
-
-          # Send to Slack
-          curl --location "${{ secrets.SLACK_WEBHOOK_URL }}" \
-               --header 'Content-type: application/json' \
-               --data "$PAYLOAD"
+            needs: [test, ai-analysis]
+            runs-on: ubuntu-latest
+            if: always()
+        
+            steps:
+              - name: Download AI Analysis Result
+                uses: actions/download-artifact@v4
+                with:
+                  name: ai-analysis-result
+        
+              - name: Read AI Analysis
+                id: analysis
+                run: |
+                  echo "Reading AI analysis..."
+                  analysis=$(cat ai-analysis-result.json)
+                  analysis="${analysis//'%'/'%25'}"
+                  analysis="${analysis//$'\n'/'%0A'}"
+                  analysis="${analysis//$'\r'/'%0D'}"
+                  echo "analysis_output=$analysis" >> "$GITHUB_OUTPUT"
+        
+              - name: Send Slack Notification
+                env:
+                  ANALYSIS_RESULT: ${{ steps.analysis.outputs.analysis_output }}
+                run: |
+                  STATUS="✅ All tests passed!"
+                  if [ "${{ needs.test.result }}" == "failure" ]; then
+                    STATUS="🚨 Some tests failed!"
+                  fi
+        
+                  # Truncate analysis if too long
+                  TRUNCATED_ANALYSIS=$(echo "$ANALYSIS_RESULT" | head -c 2800)
+        
+                  # Escape newlines and quotes for JSON
+                  ESCAPED_ANALYSIS=$(echo "$TRUNCATED_ANALYSIS" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g')
+        
+                  # Create Slack message payload
+                  PAYLOAD=$(jq -n --arg text "$STATUS\n\nAI Code Suggestions:\n$ESCAPED_ANALYSIS" '{text: $text}')
+        
+                  # Send to Slack
+                  curl --location "${{ secrets.SLACK_WEBHOOK_URL }}" \
+                       --header 'Content-type: application/json' \
+                       --data "$PAYLOAD"
