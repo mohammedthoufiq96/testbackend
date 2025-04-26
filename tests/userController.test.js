@@ -1,12 +1,58 @@
-// tests/userController.test.js
-const request = require('supertest');
-const app = require('../app'); // Import the app
+import undefined from '../src/userController.js';
 
-describe('GET /api/users', () => {
-  it('should return a list of users', async () => {
-    const response = await request(app).get('/api/users');
-    expect(response.status).toBe(200); // Expecting a 200 status code
-    expect(response.body).toHaveProperty('users'); // Checking if response has 'users'
-    expect(response.body.users).toBeInstanceOf(Array); // Ensure 'users' is an array
+const express = require('express');
+const app = express();
+const users = [
+  { id: 1, name: 'John Doe' },
+  { id: 2, name: 'Jane Doe' }
+];
+
+app.get('/users', getUsers);
+
+jest.mock('../index.js');
+
+describe('getUsers function', () => {
+  it('should return a JSON response with status code 200', async () => {
+    const req = { params: {} };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn()
+    };
+
+    await getUsers(req, res);
+
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledTimes(1);
+  });
+
+  it('should return the expected users array', async () => {
+    const req = { params: {} };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn()
+    };
+
+    await getUsers(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      users: [
+        { id: 1, name: 'John Doe' },
+        { id: 2, name: 'Jane Doe' }
+      ]
+    });
+  });
+
+  it('should return the correct error if req.params is undefined', async () => {
+    const req = {};
+    const res = {
+      status: jest.fn(),
+      json: jest.fn()
+    };
+
+    await getUsers(req, res);
+
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(500);
   });
 });
