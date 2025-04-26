@@ -1,60 +1,44 @@
 
 
-// userController.js
-const db = require('./db');
-const express = require('express');
-
-const router = express.Router();
-
-const getUsers = async (req, res) => {
-    try {
-        const users = await db.getUsers();
-        return res.status(200).json(users);
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Failed to get users' });
-    }
-};
-
-module.exports = { getUsers };
-
-// userController.test.js
-const express = require('express');
-const request = require('supertest');
-const app = express();
-require('./db');
-const { getUsers } = require('../controllers/userController');
-
-jest.mock('../controllers/db');
+const { getUsers } = require('../controller/userController');
 
 describe('getUsers', () => {
-    beforeEach(() => {
-        // Mock db service to return users on every call
-        db.getUsers.mockReturnValue([
-            { id: 1, name: 'John Doe' },
-            { id: 2, name: 'Jane Doe' },
-        ]);
-    });
+  it('should return a list of users with status 200', async () => {
+    const mockReq = {};
+    const mockRes = jest.fn().mockReturnThis();
+    const mockNext = jest.fn();
 
-    it('should get users successfully', async () => {
-        const res = await request(app).get('/users');
-        expect(res.status).toBe(200);
-        expect(res.json).toHaveBeenCalledTimes(1);
-        expect(res.json().mock.calls[0][0]).toEqual([
-            { id: 1, name: 'John Doe' },
-            { id: 2, name: 'Jane Doe' },
-        ]);
-    });
+    await getUsers(mockReq, mockRes, mockNext);
 
-    it('should return error on db failure', async () => {
-        const res = await request(app).get('/users');
-        expect(res.status).toBe(500);
-        expect(res.json).toHaveBeenCalledTimes(1);
-        expect(res.json().mock.calls[0][0]).toEqual({ message: 'Failed to get users' });
-    });
+    expect(mockRes.status).toHaveBeenCalledTimes(1);
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect(mockRes.json).toHaveBeenCalledTimes(1);
+  });
 
-    it('should handle edge cases', async () => {
-        const res = await request(app).get('/users');
-        // Additional test cases can be added here
-    });
+  it('should return an error with status 500 if no users found', async () => {
+    const mockReq = {};
+    const mockRes = jest.fn().mockReturnThis();
+    const mockNext = jest.fn();
+
+    await getUsers(mockReq, mockRes, mockNext);
+
+    expect(mockRes.status).toHaveBeenCalledTimes(1);
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+  });
+
+  it('should call next() if no error', async () => {
+    const mockReq = {};
+    const mockRes = jest.fn().mockReturnThis();
+    const mockNext = jest.fn();
+
+    await getUsers(mockReq, mockRes, mockNext);
+
+    expect(mockNext).toHaveBeenCalledTimes(1);
+  });
+
+  it('should throw an error if req object is missing', () => {
+    expect(() => getUsers(undefined)).toThrowError(
+      'req object is required'
+    );
+  });
 });
