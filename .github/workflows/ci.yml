@@ -24,30 +24,39 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run Jest Tests and Capture Output
-        id: jest-tests
-        run: |
-          TEST_OUTPUT=$(npm run test -- --json)
-          echo "TEST_OUTPUT_ESCAPED<<EOF" >> $GITHUB_ENV
-          echo "$TEST_OUTPUT" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+      - name: Run Jest Tests and Save Output
+        run: npm run test -- --json > test-output.json
+
+      - name: Upload Jest Test Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output.json
 
   ai-analysis:
     needs: test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Prepare and Send Test Results to AI
+      - name: Download Jest Test Output
+        uses: actions/download-artifact@v4
+        with:
+          name: test-output
+
+      - name: Install jq
         run: |
-          # Install jq (safe JSON builder)
           sudo apt-get update
           sudo apt-get install -y jq
 
-          # Build the prompt safely
-          jq -n --arg model "llama3.2:latest" --arg prompt "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n${{ env.TEST_OUTPUT_ESCAPED }}" --argjson stream false \
-          '{model: $model, prompt: $prompt, stream: $stream}' > prompt.json
+      - name: Prepare and Send Test Results to AI
+        run: |
+          TEST_OUTPUT=$(cat test-output.json | jq -Rs .)
 
-          # Call AI API
+          jq -n --arg model "llama3.2:latest" \
+                --arg prompt "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n$TEST_OUTPUT" \
+                --argjson stream false \
+                '{model: $model, prompt: $prompt, stream: $stream}' > prompt.json
+
           curl -s -X POST http://localhost:11434/api/generate \
             -H "Content-Type: application/json" \
             -d @prompt.json > ai-analysis-result.json
@@ -56,13 +65,13 @@ jobs:
         run: cat ai-analysis-result.json
 
   notify:
-    needs: ai-analysis
+    if: failure() && needs.test.result == 'failure'
+    needs: [test]
     runs-on: ubuntu-latest
 
     steps:
       - name: Send Slack Notification for Test Failures
-        if: failure()
         run: |
           curl -X POST -H 'Content-type: application/json' \
-          --data '{"text": "Test failed! Please check the CI pipeline for more details."}' \
-          https://hooks.slack.com/services/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
+          --data '{"text": "🚨 Jest tests failed in CI! Please check the pipeline for details."}' \
+          https://hooks.slack.com/services/your/slack/webhook/url
