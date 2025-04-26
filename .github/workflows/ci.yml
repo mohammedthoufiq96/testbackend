@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  test:
+  test-and-analyze:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,41 +24,25 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run Jest Tests
-        id: jest-tests
+      - name: Run Jest Tests and Capture Output
+        id: run-tests
         run: |
-          npm run test -- --json --outputFile=jest-results.json
+          # Capture the JSON output into a variable
+          TEST_OUTPUT=$(npm run test -- --json)
 
-      - name: Upload Jest Test Results
-        uses: actions/upload-artifact@v4
-        with:
-          name: jest-test-results
-          path: jest-results.json
+          # Escape the output correctly for JSON
+          TEST_OUTPUT_ESCAPED=$(echo "$TEST_OUTPUT" | jq -Rs .)
 
-  ai-analysis:
-    needs: test
-    runs-on: ubuntu-latest
+          # Store the escaped output as an environment variable
+          echo "TEST_OUTPUT_ESCAPED=$TEST_OUTPUT_ESCAPED" >> $GITHUB_ENV
 
-    steps:
-      - name: Download Jest Test Results
-        uses: actions/download-artifact@v4
-        with:
-          name: jest-test-results
-          path: .
-
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
-      - name: Read Jest Results into Variable and Call AI
+      - name: Prepare and Send Test Results to AI
         run: |
-          # Read file content into a variable
-          PROMPT=$(jq -Rs '.' < jest-results.json)
-
-          # Prepare full prompt JSON
+          # Build the full JSON payload
           cat <<EOF > prompt.json
           {
             "model": "llama3.2:latest",
-            "prompt": "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n${PROMPT}",
+            "prompt": "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n${{ env.TEST_OUTPUT_ESCAPED }}",
             "stream": false
           }
           EOF
@@ -71,12 +55,7 @@ jobs:
       - name: Output AI Analysis
         run: cat ai-analysis-result.json
 
-  notify:
-    needs: ai-analysis
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Send Slack Notification for Test Results
+      - name: Send Slack Notification if Failed
         if: failure()
         run: |
           curl -X POST -H 'Content-type: application/json' \
