@@ -46,28 +46,24 @@ jobs:
           name: jest-test-results
           path: .
 
-      - name: List all files (debugging)
-        run: find . -type f
-
-      - name: Validate jest-results.json exists
-        run: |
-          if [ ! -f jest-results.json ]; then
-            echo "jest-results.json not found!"
-            exit 1
-          fi
-
       - name: Install jq
         run: sudo apt-get install -y jq
 
-      - name: Prepare and Send Test Results to AI
+      - name: Read Jest Results into Variable and Call AI
         run: |
+          # Read file content into a variable
           PROMPT=$(jq -Rs '.' < jest-results.json)
-          echo '{
-            "model": "llama3.2:latest",
-            "prompt": "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n'"$PROMPT"'",
-            "stream": false
-          }' > prompt.json
 
+          # Prepare full prompt JSON
+          cat <<EOF > prompt.json
+          {
+            "model": "llama3.2:latest",
+            "prompt": "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n${PROMPT}",
+            "stream": false
+          }
+          EOF
+
+          # Call AI API
           curl -s -X POST http://localhost:11434/api/generate \
             -H "Content-Type: application/json" \
             -d @prompt.json > ai-analysis-result.json
