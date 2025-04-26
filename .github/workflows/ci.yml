@@ -56,7 +56,8 @@ jobs:
         run: sudo apt-get install -y jq
 
       - name: Validate jest-results.json exists
-        run: |
+        run: | 
+          mv artifact-results/jest-results.json ./
           if [ ! -f artifact-results/jest-results.json ]; then
             echo "jest-results.json not found!"
             exit 1
