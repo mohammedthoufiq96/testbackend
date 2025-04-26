@@ -44,24 +44,20 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: jest-test-results
-          path: ./artifact-results
+          path: .
 
       - name: List all files (debugging)
         run: find . -type f
 
-      - name: Move jest-results.json to root
-        run: mv artifact-results/jest-results.json ./
-
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
       - name: Validate jest-results.json exists
-        run: | 
-          mv artifact-results/jest-results.json ./
-          if [ ! -f artifact-results/jest-results.json ]; then
+        run: |
+          if [ ! -f jest-results.json ]; then
             echo "jest-results.json not found!"
             exit 1
           fi
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
 
       - name: Prepare and Send Test Results to AI
         run: |
