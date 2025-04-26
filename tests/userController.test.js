@@ -1,4 +1,4 @@
-import {getUsers} from '../src/userController.js';
+
 
 const express = require('express');
 const app = express();
