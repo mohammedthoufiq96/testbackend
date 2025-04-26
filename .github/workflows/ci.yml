@@ -70,7 +70,6 @@ jobs:
                 --argjson stream false \
                 '{model: $model, prompt: $prompt, stream: $stream}' > prompt.json
 
-
           echo "Sending prompt to AI endpoint..."
           curl -v -X POST https://604b-14-99-175-222.ngrok-free.app/api/ainanalyze/ \
             -H "Content-Type: application/json" \
@@ -100,9 +99,11 @@ jobs:
         id: analysis
         run: |
           echo "Reading AI analysis..."
-          echo "analysis_output<<EOF" >> $GITHUB_OUTPUT
-          cat ai-analysis-result.json >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "analysis_output<<EOF"
+            cat ai-analysis-result.json
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Send Slack Notification
         env:
@@ -116,7 +117,7 @@ jobs:
           # Truncate analysis if too long
           TRUNCATED_ANALYSIS=$(echo "$ANALYSIS_RESULT" | head -c 2800)
 
-          # Escape newlines and quotes
+          # Escape newlines and quotes for JSON
           ESCAPED_ANALYSIS=$(echo "$TRUNCATED_ANALYSIS" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g')
 
           # Create Slack message payload
