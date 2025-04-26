@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const getProducts = require('../src/getProducts');
+const getProducts = require('../controller/productController');
 
 describe('getProducts function', () => {
     it('should return a 200 status code and an array of user objects', async () => {
