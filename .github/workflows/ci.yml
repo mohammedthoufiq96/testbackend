@@ -57,7 +57,7 @@ jobs:
 
       - name: Validate jest-results.json exists
         run: |
-          if [ ! -f jest-results.json ]; then
+          if [ ! -f artifact-results/jest-results.json ]; then
             echo "jest-results.json not found!"
             exit 1
           fi
