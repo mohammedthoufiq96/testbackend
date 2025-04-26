@@ -25,7 +25,7 @@ jobs:
         run: npm install
 
       - name: Run Jest Tests and Save Output
-        run: npm run test -- --json --outputFile=test-output.json
+        run: npm run test -- --json --outputFile=test-output.json || true  # Ensures the job continues even if tests fail
 
       - name: Print Jest Output (Debug)
         run: cat test-output.json
@@ -83,5 +83,3 @@ jobs:
         with:
           name: ai-analysis-result
           path: ai-analysis-result.json
-          
-

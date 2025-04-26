@@ -1,34 +1,60 @@
 
 
 const express = require('express');
-const router = express.Router();
+const app = express();
+
 const getProducts = require('../controller/productController');
 
 describe('getProducts function', () => {
-    it('should return a 200 status code and an array of user objects', async () => {
-        const req = { status: jest.fn() };
-        const res = { json: jest.fn() };
+  let req, res;
+  beforeEach(() => {
+    req = { query: {} };
+    res = { status: jest.fn(), json: jest.fn() };
+  });
 
-        getProducts(req, res);
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-        expect(res.status).toHaveBeenCalledTimes(1);
-        expect(res.status).toHaveBeenCalledWith(200);
-
-        expect(res.json).toHaveBeenCalledTimes(1);
-        expect(res.json).toHaveBeenCalledWith({
-            users: [
-                { id: 1, name: 'John Doe' },
-                { id: 2, name: 'Jane Doe' },
-            ],
-        });
+  it('should return a JSON response with users data on happy path', async () => {
+    getProducts(req, res);
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledTimes(1);
+    expect(res.json.mock.calls[0][0]).toEqual({
+      users: [
+        { id: 1, name: 'John Doe' },
+        { id: 2, name: 'Jane Doe' },
+      ],
     });
+  });
 
-    it('should not change the request object', () => {
-        const req = { status: jest.fn() };
-        const res = { json: jest.fn() };
+  it('should throw an error if res.status is not a function', () => {
+    req = { query: {} };
+    const originalStatus = jest.spyOn(res, 'status');
+    try {
+      getProducts(req, res);
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+    }
+    expect(originalStatus).not.toHaveBeenCalled();
+  });
 
-        getProducts(req, res);
+  it('should return a JSON response with users data on success', async () => {
+    req = { query: {} };
+    res.json.mockImplementation(() => ({}));
+    getProducts(req, res);
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledTimes(1);
+  });
 
-        expect(req.status).toHaveBeenCalledTimes(0);
-    });
+  it('should throw an error if res.json is not a function', () => {
+    req = { query: {} };
+    const originalJson = jest.spyOn(res, 'json');
+    try {
+      getProducts(req, res);
+    } catch (error) {}
+    expect(originalJson).not.toHaveBeenCalled();
+  });
 });

@@ -1,58 +1,45 @@
 
 
 const express = require('express');
-const app = express();
-const users = [
-  { id: 1, name: 'John Doe' },
-  { id: 2, name: 'Jane Doe' }
-];
-
-app.get('/users', getUsers);
-
-jest.mock('../index.js');
+const request = require('supertest');
+const getUsers = require('../controller/userController')
 
 describe('getUsers function', () => {
-  it('should return a JSON response with status code 200', async () => {
-    const req = { params: {} };
-    const res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn()
-    };
+  let app;
 
-    await getUsers(req, res);
-
-    expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledTimes(1);
+  beforeEach(() => {
+    app = express();
+    app.get('/', getUsers);
   });
 
-  it('should return the expected users array', async () => {
-    const req = { params: {} };
-    const res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn()
-    };
-
-    await getUsers(req, res);
-
-    expect(res.json).toHaveBeenCalledWith({
-      users: [
-        { id: 1, name: 'John Doe' },
-        { id: 2, name: 'Jane Doe' }
-      ]
+  describe('Happy Path Test', () => {
+    it('returns 200 and users array with mock data', async () => {
+      const response = await request(app).get('/users');
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        users: [
+          { id: 1, name: 'John Doe' },
+          { id: 2, name: 'Jane Doe' },
+        ],
+      });
     });
   });
 
-  it('should return the correct error if req.params is undefined', async () => {
-    const req = {};
-    const res = {
-      status: jest.fn(),
-      json: jest.fn()
-    };
+  describe('Error Handling Test', () => {
+    it('throws an error when req object is not defined', async () => {
+      expect(() => getUsers(undefined, {})).toThrow('req is not defined');
+    });
 
-    await getUsers(req, res);
+    it('throws an error when res object is not defined', async () => {
+      expect(() => getUsers({}, { status: '500' })).toThrow('res is not defined');
+    });
+  });
 
-    expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenCalledWith(500);
+  describe('Edge Case Test', () => {
+    it('returns empty users array for no user data', async () => {
+      const response = await request(app).get('/users');
+      expect(response.status).toBe(200);
+      expect(response.body.users.length).toBe(0);
+    });
   });
 });
