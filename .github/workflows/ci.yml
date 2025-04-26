@@ -83,40 +83,5 @@ jobs:
         with:
           name: ai-analysis-result
           path: ai-analysis-result.json
-
-  notify:
-            needs: [test, ai-analysis]
-            runs-on: ubuntu-latest
-            if: always()
-        
-            steps:
-              - name: Download AI Analysis Result
-                uses: actions/download-artifact@v4
-                with:
-                  name: ai-analysis-result
-        
-              - name: Read AI Analysis
-                id: analysis
-                run: |
-                  echo "Reading AI analysis..."
-                  analysis=$(cat ai-analysis-result.json)
-                  analysis="${analysis//'%'/'%25'}"
-                  analysis="${analysis//$'\n'/'%0A'}"
-                  analysis="${analysis//$'\r'/'%0D'}"
-                  echo "analysis_output=$analysis" >> "$GITHUB_OUTPUT"
-        
-              - name: Send Slack Notification
-                env:
-                  ANALYSIS_RESULT: ${{ steps.analysis.outputs.analysis_output }}
-                run: |
-                  STATUS="✅ All tests passed!"
-                  if [ "${{ needs.test.result }}" == "failure" ]; then
-                  STATUS="🚨 Some tests failed!"
-                  fi
-                  TRUNCATED_ANALYSIS=$(echo "$ANALYSIS_RESULT" | head -c 2800)
-                  ESCAPED_ANALYSIS=$(echo "$TRUNCATED_ANALYSIS" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g')
-                  PAYLOAD=$(jq -n --arg text "$STATUS\n\nAI Code Suggestions:\n$ESCAPED_ANALYSIS" '{text: $text}')
-                  curl -X POST https://604b-14-99-175-222.ngrok-free.app/api/sendnotfication/ \
-                  --header 'Content-type: application/json' \
-                  --data "$PAYLOAD"
+          
 
