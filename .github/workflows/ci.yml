@@ -95,6 +95,6 @@ jobs:
             STATUS="🚨 Some tests failed!"
           fi
 
-          curl --location 'https://hooks.slack.com/services/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' \
+          curl --location ${{ secrets.SLACK_WEBHOOK_URL }}          \
           --header 'Content-type: application/json' \
           --data '{"text":"Hello, World!"}'
