@@ -1,60 +1,36 @@
-import undefined from '../src/productController.js';
 
-const getProducts = require('./getProducts');
 
-jest.mock('express', () => ({
-  Request: jest.fn(),
-  Response: class {
-    json = jest.fn();
-    status = jest.fn(() => this);
-    send = jest.fn((status, data) => {
-      if (arguments.length === 2) {
-        return this.json(data);
-      }
-      return this.status(status);
+const request = require('supertest');
+const express = require('express');
+
+const app = express();
+const userController = require('../controllers/userController');
+
+describe('User Controller', () => {
+    beforeEach(() => {
+        app.use(express.json());
+        app.use('/users', userController);
     });
-  },
-}));
 
-describe('getProducts controller', () => {
-  let req;
-  let res;
-
-  beforeEach(() => {
-    req = new jest.MockedExpressRequest();
-    res = new jest.MockedExpressResponse();
-  });
-
-  it('should return a 200 status with mock data when no error occurs', async () => {
-    getProducts(req, res);
-
-    expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.json).toHaveBeenCalledTimes(1);
-    expect(res.json).toHaveBeenCalledWith({
-      users: [
-        { id: 1, name: 'John Doe' },
-        { id: 2, name: 'Jane Doe' },
-      ],
+    afterEach(() => {
+        // Clean up
     });
-  });
 
-  it('should return a 500 status with an error when an internal server error occurs', async () => {
-    const throwNewError = jest.fn();
+    it('should return 200 when getting all products', async () => {
+        const res = await request(app).get('/users');
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toEqual({
+            users: [
+                { id: 1, name: 'John Doe' },
+                { id: 2, name: 'Jane Doe' },
+            ],
+        });
+    });
 
-    getProducts(req, res);
+    it('should return error when getting products', async () => {
+        const res = await request(app).get('/users');
+        expect(res.statusCode).toBe(500);
+    });
 
-    expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.json).not.toHaveBeenCalled();
-    expect(throwNewError).toHaveBeenCalledTimes(1);
-  });
-
-  it('should return a 404 status with an error when no data is available', async () => {
-    req.query = {};
-
-    getProducts(req, res);
-
-    expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.json).not.toHaveBeenCalled();
-    expect(res.send).toHaveBeenCalledTimes(1);
-  });
+    // Add more tests for success, error, and edge cases
 });

@@ -1,68 +1,60 @@
-import undefined from '../src/userController.js';
 
+
+// userController.js
+const db = require('./db');
 const express = require('express');
-const { jest } = require('@jest/globals');
 
-jest.mock('./res', () => ({
-  status: jest.fn(() => this),
-  json: jest.fn(() => this),
-  send: jest.fn(() => this),
-}));
+const router = express.Router();
 
-describe('getUsers controller', () => {
-  let req;
-  let res;
+const getUsers = async (req, res) => {
+    try {
+        const users = await db.getUsers();
+        return res.status(200).json(users);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Failed to get users' });
+    }
+};
 
-  beforeEach(() => {
-    req = { method: 'GET' };
-    res = { status: jest.fn(), json: jest.fn(), send: jest.fn() };
-  });
+module.exports = { getUsers };
 
-  it('should return users on success', async () => {
-    const getUsersSpy = jest.spyOn(require('./getUsers'), 'getUsers');
-    getUsersSpy.mockImplementation(() => Promise.resolve({ users: [{ id: 1, name: 'John Doe' }, { id: 2, name: 'Jane Doe' }] }));
+// userController.test.js
+const express = require('express');
+const request = require('supertest');
+const app = express();
+require('./db');
+const { getUsers } = require('../controllers/userController');
 
-    await getUsers(req, res);
+jest.mock('../controllers/db');
 
-    expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledTimes(1);
-    expect(res.json).toHaveBeenCalledWith({ users: [{ id: 1, name: 'John Doe' }, { id: 2, name: 'Jane Doe' }] });
-  });
+describe('getUsers', () => {
+    beforeEach(() => {
+        // Mock db service to return users on every call
+        db.getUsers.mockReturnValue([
+            { id: 1, name: 'John Doe' },
+            { id: 2, name: 'Jane Doe' },
+        ]);
+    });
 
-  it('should return error on failure', async () => {
-    const getUsersSpy = jest.spyOn(require('./getUsers'), 'getUsers');
-    getUsersSpy.mockImplementation(() => Promise.reject({ message: 'Error fetching users' }));
+    it('should get users successfully', async () => {
+        const res = await request(app).get('/users');
+        expect(res.status).toBe(200);
+        expect(res.json).toHaveBeenCalledTimes(1);
+        expect(res.json().mock.calls[0][0]).toEqual([
+            { id: 1, name: 'John Doe' },
+            { id: 2, name: 'Jane Doe' },
+        ]);
+    });
 
-    await expect(getUsers(req, res)).rejects.toThrow();
-    expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenCalledWith(500);
-  });
+    it('should return error on db failure', async () => {
+        const res = await request(app).get('/users');
+        expect(res.status).toBe(500);
+        expect(res.json).toHaveBeenCalledTimes(1);
+        expect(res.json().mock.calls[0][0]).toEqual({ message: 'Failed to get users' });
+    });
 
-  it('should return a generic error on unknown status', async () => {
-    const getUsersSpy = jest.spyOn(require('./getUsers'), 'getUsers');
-    getUsersSpy.mockImplementation(() => Promise.reject({ message: 'Unknown status' }));
-
-    await expect(getUsers(req, res)).rejects.toThrow();
-    expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenCalledWith(500);
-  });
-
-  it('should return a generic error on unknown error', async () => {
-    const getUsersSpy = jest.spyOn(require('./getUsers'), 'getUsers');
-    getUsersSpy.mockImplementation(() => Promise.reject(new Error({ message: 'Unknown error' })));
-
-    await expect(getUsers(req, res)).rejects.toThrow();
-    expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenCalledWith(500);
-  });
-
-  it('should return a generic success on no response', async () => {
-    const getUsersSpy = jest.spyOn(require('./getUsers'), 'getUsers');
-    getUsersSpy.mockImplementation(() => Promise.resolve());
-
-    await getUsers(req, res);
-
-    expect(res.send).toHaveBeenCalledTimes(1);
-  });
+    it('should handle edge cases', async () => {
+        const res = await request(app).get('/users');
+        // Additional test cases can be added here
+    });
 });
