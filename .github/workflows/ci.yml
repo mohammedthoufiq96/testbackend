@@ -57,9 +57,13 @@ jobs:
                 --argjson stream false \
                 '{model: $model, prompt: $prompt, stream: $stream}' > prompt.json
 
-          curl -s -X POST http://localhost:11434/api/generate \
-            -H "Content-Type: application/json" \
-            -d @prompt.json > ai-analysis-result.json
+          curl --location 'http://localhost:11434/api/generate' \
+                --header 'Content-Type: application/json' \
+                --data '{
+                  "model": "llama3.2:latest",
+                  "prompt": "hiii",
+                  "stream": false
+                  }' > ai-analysis-result.json
 
       - name: Output AI Analysis
         run: cat ai-analysis-result.json
