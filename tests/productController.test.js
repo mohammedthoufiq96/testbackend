@@ -1,8 +1,8 @@
-import {getProducts} from '../src/productController.js';
+
 
 const express = require('express');
 const router = express.Router();
-// const getProducts = require('./getProducts');
+const getProducts = require('../src/getProducts');
 
 describe('getProducts function', () => {
     it('should return a 200 status code and an array of user objects', async () => {

@@ -1,5 +1,5 @@
 const request = require('supertest')
-import app from './app.js';
+const app = require('./app')
 
 describe('GET /users', () => {
   it('should return a successful response with users data', async () => {
