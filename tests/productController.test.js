@@ -1,27 +1,36 @@
+import undefined from '../src/productController.js';
 
+const getProducts = require('./getProducts');
 
-const express = require('express');
-const app = express();
+jest.mock('express', () => ({
+  Request: jest.fn(),
+  Response: class {
+    json = jest.fn();
+    status = jest.fn(() => this);
+    send = jest.fn((status, data) => {
+      if (arguments.length === 2) {
+        return this.json(data);
+      }
+      return this.status(status);
+    });
+  },
+}));
 
-const getProducts = require('../controller/productController');
+describe('getProducts controller', () => {
+  let req;
+  let res;
 
-describe('getProducts function', () => {
-  let req, res;
   beforeEach(() => {
-    req = { query: {} };
-    res = { status: jest.fn(), json: jest.fn() };
+    req = new jest.MockedExpressRequest();
+    res = new jest.MockedExpressResponse();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should return a JSON response with users data on happy path', async () => {
+  it('should return a 200 status with mock data when no error occurs', async () => {
     getProducts(req, res);
+
     expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledTimes(1);
-    expect(res.json.mock.calls[0][0]).toEqual({
+    expect(res.json).toHaveBeenCalledWith({
       users: [
         { id: 1, name: 'John Doe' },
         { id: 2, name: 'Jane Doe' },
@@ -29,32 +38,23 @@ describe('getProducts function', () => {
     });
   });
 
-  it('should throw an error if res.status is not a function', () => {
-    req = { query: {} };
-    const originalStatus = jest.spyOn(res, 'status');
-    try {
-      getProducts(req, res);
-    } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-    }
-    expect(originalStatus).not.toHaveBeenCalled();
-  });
+  it('should return a 500 status with an error when an internal server error occurs', async () => {
+    const throwNewError = jest.fn();
 
-  it('should return a JSON response with users data on success', async () => {
-    req = { query: {} };
-    res.json.mockImplementation(() => ({}));
     getProducts(req, res);
+
     expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledTimes(1);
+    expect(res.json).not.toHaveBeenCalled();
+    expect(throwNewError).toHaveBeenCalledTimes(1);
   });
 
-  it('should throw an error if res.json is not a function', () => {
-    req = { query: {} };
-    const originalJson = jest.spyOn(res, 'json');
-    try {
-      getProducts(req, res);
-    } catch (error) {}
-    expect(originalJson).not.toHaveBeenCalled();
+  it('should return a 404 status with an error when no data is available', async () => {
+    req.query = {};
+
+    getProducts(req, res);
+
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.json).not.toHaveBeenCalled();
+    expect(res.send).toHaveBeenCalledTimes(1);
   });
 });

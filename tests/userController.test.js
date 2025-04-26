@@ -1,45 +1,68 @@
-
+import undefined from '../src/userController.js';
 
 const express = require('express');
-const request = require('supertest');
-const getUsers = require('../controller/userController')
+const { jest } = require('@jest/globals');
 
-describe('getUsers function', () => {
-  let app;
+jest.mock('./res', () => ({
+  status: jest.fn(() => this),
+  json: jest.fn(() => this),
+  send: jest.fn(() => this),
+}));
+
+describe('getUsers controller', () => {
+  let req;
+  let res;
 
   beforeEach(() => {
-    app = express();
-    app.get('/', getUsers);
+    req = { method: 'GET' };
+    res = { status: jest.fn(), json: jest.fn(), send: jest.fn() };
   });
 
-  describe('Happy Path Test', () => {
-    it('returns 200 and users array with mock data', async () => {
-      const response = await request(app).get('/users');
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual({
-        users: [
-          { id: 1, name: 'John Doe' },
-          { id: 2, name: 'Jane Doe' },
-        ],
-      });
-    });
+  it('should return users on success', async () => {
+    const getUsersSpy = jest.spyOn(require('./getUsers'), 'getUsers');
+    getUsersSpy.mockImplementation(() => Promise.resolve({ users: [{ id: 1, name: 'John Doe' }, { id: 2, name: 'Jane Doe' }] }));
+
+    await getUsers(req, res);
+
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledTimes(1);
+    expect(res.json).toHaveBeenCalledWith({ users: [{ id: 1, name: 'John Doe' }, { id: 2, name: 'Jane Doe' }] });
   });
 
-  describe('Error Handling Test', () => {
-    it('throws an error when req object is not defined', async () => {
-      expect(() => getUsers(undefined, {})).toThrow('req is not defined');
-    });
+  it('should return error on failure', async () => {
+    const getUsersSpy = jest.spyOn(require('./getUsers'), 'getUsers');
+    getUsersSpy.mockImplementation(() => Promise.reject({ message: 'Error fetching users' }));
 
-    it('throws an error when res object is not defined', async () => {
-      expect(() => getUsers({}, { status: '500' })).toThrow('res is not defined');
-    });
+    await expect(getUsers(req, res)).rejects.toThrow();
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(500);
   });
 
-  describe('Edge Case Test', () => {
-    it('returns empty users array for no user data', async () => {
-      const response = await request(app).get('/users');
-      expect(response.status).toBe(200);
-      expect(response.body.users.length).toBe(0);
-    });
+  it('should return a generic error on unknown status', async () => {
+    const getUsersSpy = jest.spyOn(require('./getUsers'), 'getUsers');
+    getUsersSpy.mockImplementation(() => Promise.reject({ message: 'Unknown status' }));
+
+    await expect(getUsers(req, res)).rejects.toThrow();
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+
+  it('should return a generic error on unknown error', async () => {
+    const getUsersSpy = jest.spyOn(require('./getUsers'), 'getUsers');
+    getUsersSpy.mockImplementation(() => Promise.reject(new Error({ message: 'Unknown error' })));
+
+    await expect(getUsers(req, res)).rejects.toThrow();
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+
+  it('should return a generic success on no response', async () => {
+    const getUsersSpy = jest.spyOn(require('./getUsers'), 'getUsers');
+    getUsersSpy.mockImplementation(() => Promise.resolve());
+
+    await getUsers(req, res);
+
+    expect(res.send).toHaveBeenCalledTimes(1);
   });
 });
