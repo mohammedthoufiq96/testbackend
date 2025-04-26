@@ -111,19 +111,12 @@ jobs:
                 run: |
                   STATUS="✅ All tests passed!"
                   if [ "${{ needs.test.result }}" == "failure" ]; then
-                    STATUS="🚨 Some tests failed!"
+                  STATUS="🚨 Some tests failed!"
                   fi
-        
-                  # Truncate analysis if too long
                   TRUNCATED_ANALYSIS=$(echo "$ANALYSIS_RESULT" | head -c 2800)
-        
-                  # Escape newlines and quotes for JSON
                   ESCAPED_ANALYSIS=$(echo "$TRUNCATED_ANALYSIS" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g')
-        
-                  # Create Slack message payload
                   PAYLOAD=$(jq -n --arg text "$STATUS\n\nAI Code Suggestions:\n$ESCAPED_ANALYSIS" '{text: $text}')
-        
-                  # Send to Slack
-                    curl -v -X POST https://604b-14-99-175-222.ngrok-free.app/api/sendnotfication/ \
-                       --header 'Content-type: application/json' \
-                       --data "$PAYLOAD"
+                  curl -X POST https://604b-14-99-175-222.ngrok-free.app/api/sendnotfication/ \
+                  --header 'Content-type: application/json' \
+                  --data "$PAYLOAD"
+
