@@ -57,43 +57,44 @@ jobs:
                 --argjson stream false \
                 '{model: $model, prompt: $prompt, stream: $stream}' > prompt.json
 
-           curl -s -X POST https://2daf-14-99-175-222.ngrok-free.app/api/generate \
+          curl -s -X POST https://2daf-14-99-175-222.ngrok-free.app/api/generate \
             -H "Content-Type: application/json" \
             -d @prompt.json > ai-analysis-result.json
 
-      - name: Output AI Analysis
-        run: cat ai-analysis-result.json
+      - name: Upload AI Analysis Result
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-analysis-result
+          path: ai-analysis-result.json
 
-   notify:
-          needs: [test, ai-analysis]
-          runs-on: ubuntu-latest
-          if: always()  # Run regardless of previous job status
-      
-          steps:
-            - name: Download AI Analysis Result
-              uses: actions/download-artifact@v4
-              with:
-                name: test-output
-      
-            - name: Read AI Analysis
-              id: analysis
-              run: |
-                echo "Reading AI analysis..."
-                cat ai-analysis-result.json
-                echo "analysis_output<<EOF" >> $GITHUB_OUTPUT
-                cat ai-analysis-result.json >> $GITHUB_OUTPUT
-                echo "EOF" >> $GITHUB_OUTPUT
-      
-            - name: Send Slack Notification
-              env:
-                ANALYSIS_RESULT: ${{ steps.analysis.outputs.analysis_output }}
-              run: |
-                STATUS="✅ All tests passed!"
-                if [ "${{ needs.test.result }}" == "failure" ]; then
-                  STATUS="🚨 Some tests failed!"
-                fi
-      
-                curl -X POST -H 'Content-type: application/json' \
-                --data "$(jq -n --arg text "$STATUS\n\nAI Code Suggestions:\n$ANALYSIS_RESULT" '{text: $text}')" \
-                https://hooks.slack.com/services/your/slack/webhook/url
-      
+  notify:
+    needs: [test, ai-analysis]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download AI Analysis Result
+        uses: actions/download-artifact@v4
+        with:
+          name: ai-analysis-result
+
+      - name: Read AI Analysis
+        id: analysis
+        run: |
+          echo "Reading AI analysis..."
+          echo "analysis_output<<EOF" >> $GITHUB_OUTPUT
+          cat ai-analysis-result.json >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Send Slack Notification
+        env:
+          ANALYSIS_RESULT: ${{ steps.analysis.outputs.analysis_output }}
+        run: |
+          STATUS="✅ All tests passed!"
+          if [ "${{ needs.test.result }}" == "failure" ]; then
+            STATUS="🚨 Some tests failed!"
+          fi
+
+          curl -X POST -H 'Content-type: application/json' \
+          --data "$(jq -n --arg text "$STATUS\n\nAI Code Suggestions:\n$ANALYSIS_RESULT" '{text: $text}')" \
+          https://hooks.slack.com/services/your/slack/webhook/url
