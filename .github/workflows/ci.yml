@@ -25,7 +25,10 @@ jobs:
         run: npm install
 
       - name: Run Jest Tests and Save Output
-        run: npm run test -- --json > test-output.json
+        run: npm run test -- --json --outputFile=test-output.json
+
+      - name: Print Jest Output (Debug)
+        run: cat test-output.json
 
       - name: Upload Jest Test Output
         uses: actions/upload-artifact@v4
@@ -50,16 +53,30 @@ jobs:
 
       - name: Prepare and Send Test Results to AI
         run: |
-          TEST_OUTPUT=$(cat test-output.json | jq -Rs .)
+          echo "Reading test output..."
+          TEST_OUTPUT=$(cat test-output.json)
+
+          PROMPT="Analyze the following Jest test results and provide:
+          - Summary of pass/fail
+          - Possible reasons for failure
+          - Suggestions to fix
+          - Code improvement tips
+
+          Test Results:
+          $TEST_OUTPUT"
 
           jq -n --arg model "llama3.2:latest" \
-                --arg prompt "Analyze the following Jest test results and provide:\n- Summary of pass/fail\n- Possible reasons for failure\n- Suggestions to fix\n- Code improvement tips\n\nTest Results:\n$TEST_OUTPUT" \
+                --arg prompt "$PROMPT" \
                 --argjson stream false \
                 '{model: $model, prompt: $prompt, stream: $stream}' > prompt.json
 
-          curl -s -X POST https://2daf-14-99-175-222.ngrok-free.app/api/generate \
+          echo "Sending prompt to AI endpoint..."
+          curl -v -X POST https://2daf-14-99-175-222.ngrok-free.app/api/generate \
             -H "Content-Type: application/json" \
             -d @prompt.json > ai-analysis-result.json
+
+      - name: Print AI Analysis Result (Debug)
+        run: cat ai-analysis-result.json
 
       - name: Upload AI Analysis Result
         uses: actions/upload-artifact@v4
