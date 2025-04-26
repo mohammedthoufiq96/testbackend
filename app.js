@@ -6,3 +6,4 @@ app.use(express.json()); // Middleware to parse JSON requests
 app.use('/api/users', userRoutes); // Using userRoutes for API
 
 module.exports = app;
+
