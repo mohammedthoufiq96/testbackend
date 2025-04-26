@@ -97,4 +97,4 @@ jobs:
 
           curl -X POST -H 'Content-type: application/json' \
           --data "$(jq -n --arg text "$STATUS\n\nAI Code Suggestions:\n$ANALYSIS_RESULT" '{text: $text}')" \
-          https://hooks.slack.com/services/your/slack/webhook/url
+          https://hooks.slack.com/services/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
