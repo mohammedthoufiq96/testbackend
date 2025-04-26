@@ -56,11 +56,26 @@ jobs:
           echo "Reading test output..."
           TEST_OUTPUT=$(cat test-output.json)
 
+          # Extract test results (e.g., number of passed, failed, total tests)
+          FAILED_TESTS=$(jq '.numFailedTests' test-output.json)
+          PASSED_TESTS=$(jq '.numPassedTests' test-output.json)
+          TOTAL_TESTS=$(jq '.totalTests' test-output.json)
+
+          # Create a summary to be added to the AI prompt
+          TEST_SUMMARY="Test Summary:
+          - Passed tests: $PASSED_TESTS
+          - Failed tests: $FAILED_TESTS
+          - Total tests: $TOTAL_TESTS"
+
+          # Add the test summary to the AI prompt
           PROMPT="Analyze the following Jest test results and provide:
           - Summary of pass/fail
           - Possible reasons for failure
           - Suggestions to fix
           - Code improvement tips
+
+          Test Summary:
+          $TEST_SUMMARY
 
           Test Results:
           $TEST_OUTPUT"
