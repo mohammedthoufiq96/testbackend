@@ -71,7 +71,7 @@ jobs:
                 '{model: $model, prompt: $prompt, stream: $stream}' > prompt.json
 
           echo "Sending prompt to AI endpoint..."
-          curl -v -X POST https://2daf-14-99-175-222.ngrok-free.app/api/generate \
+          curl -v -X POST https://890d-14-99-175-222.ngrok-free.app/api/generate \
             -H "Content-Type: application/json" \
             -d @prompt.json > ai-analysis-result.json
 
