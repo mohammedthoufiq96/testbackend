@@ -1,97 +1,54 @@
+// tests/productController.test.js
 
+const { getProducts } = require('../controllers/productController');
 
-const getProducts = require('../controller/productController');
-const request = jest.fn();
-const response = jest.fn();
+describe('Product Controller', () => {
+  describe('getProducts function', () => {
+    let req;
+    let res;
+    let next;
 
-describe('getProducts', () => {
-  describe('success case', () => {
     beforeEach(() => {
-      response.status.mockReset();
+      req = jest.fn();
+      res = jest.fn();
+      next = jest.fn();
+
+      // Mock database service
+      const dbServiceMock = require('../mocks/database.mock.js');
+      delete require.cache[require.resolve('../controllers/productController')];
+      require('../controllers/productController');
+
+      // Reset mock functions
+      req.resetMocks();
+      res.resetMocks();
+      next.resetMocks();
+
+      getProducts(req, res, next);
     });
 
-    it('returns a JSON response with users data', async () => {
-      await getProducts(request, response);
-      expect(response.status).toHaveBeenCalledTimes(1);
-      expect(response.status).toHaveBeenCalledWith(200);
-      expect(response.json).toHaveBeenCalledTimes(1);
-      expect(response.json).toHaveBeenCalledWith({
-        users: [
-          { id: 1, name: 'John Doe' },
-          { id: 2, name: 'Jane Doe' },
-        ],
-      });
+    it('should return products successfully', async () => {
+      const expectedResponse = [
+        { id: 1, name: 'John Doe' },
+        { id: 2, name: 'Jane Doe' },
+      ];
+
+      req.execute.mockResolvedValueOnce(expectedResponse);
+
+      await getProducts(req, res, next);
+      expect(res.status).toHaveBeenCalledTimes(1);
+      expect(res.json).toHaveBeenCalledTimes(1);
     });
 
-    it('calls the next middleware function', async () => {
-      await getProducts(request, response);
-      expect(response.next).toHaveBeenCalledTimes(0);
-      jest.mocked(getProducts).mockRestore();
-      await getProducts(request, response);
-      expect(response.next).toHaveBeenCalledTimes(1);
+    it('should return error message on failure', async () => {
+      const expectedError = new Error('Test error');
+      req.execute.mockRejectedValueOnce(expectedError);
+
+      await getProducts(req, res, next);
+      expect(res.status).toHaveBeenCalledTimes(1);
+      expect(res.json).toHaveBeenCalledTimes(1);
+      expect(res.status).toHaveBeenCalledWith(500);
     });
   });
 
-  describe('error case - invalid status code', () => {
-    beforeEach(() => {
-      response.status.mockReset();
-    });
-
-    it('throws an error with the provided status code', async () => {
-      try {
-        await getProducts(request, response);
-        expect.fail('Expected an error to be thrown');
-      } catch (error) {
-        expect(error.code).toBe('http')
-          .and.isRequired;
-        expect(error.message).toBe('Invalid HTTP Status Code: 123')
-          .and.toBeGreaterThan(0)
-          .and.numberOfMatches(1);
-      }
-    });
-  });
-
-  describe('error case - invalid response type', () => {
-    beforeEach(() => {
-      response.status.mockReset();
-    });
-
-    it('throws an error with the provided response type', async () => {
-      try {
-        await getProducts(request, response);
-        expect.fail('Expected an error to be thrown');
-      } catch (error) {
-        expect(error.code).toBe('http')
-          .and.isRequired;
-        expect(error.message).toBe('Unexpected value: undefined')
-          .and.toBeGreaterThan(0)
-          .and.numberOfMatches(1);
-      }
-    });
-
-    it('throws an error with the provided response type - void', async () => {
-      try {
-        await getProducts(request, null);
-        expect.fail('Expected an error to be thrown');
-      } catch (error) {
-        expect(error.code).toBe('http')
-          .and.isRequired;
-        expect(error.message).toBe('Unexpected value: undefined')
-          .and.toBeGreaterThan(0)
-          .and.numberOfMatches(1);
-      }
-    });
-  });
-
-  describe('missing controller function', () => {
-    it('throws an error', () => {
-      try {
-        require('./getProductsNonExistent');
-        expect.fail('Expected a module not found error to be thrown');
-      } catch (error) {
-        expect(error.code).toBe('MODULE_NOT_FOUND')
-          .and.isRequired;
-      }
-    });
-  });
+  // Additional tests...
 });

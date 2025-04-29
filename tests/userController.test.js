@@ -1,44 +1,70 @@
+// tests/controllers/userController.test.js
 
+const UserController = require('../controllers/userController');
+const req = jest.fn();
+const res = jest.fn();
+const next = jest.fn();
 
-const { getUsers } = require('../controller/userController');
-
-describe('getUsers', () => {
-  it('should return a list of users with status 200', async () => {
-    const mockReq = {};
-    const mockRes = jest.fn().mockReturnThis();
-    const mockNext = jest.fn();
-
-    await getUsers(mockReq, mockRes, mockNext);
-
-    expect(mockRes.status).toHaveBeenCalledTimes(1);
-    expect(mockRes.status).toHaveBeenCalledWith(200);
-    expect(mockRes.json).toHaveBeenCalledTimes(1);
+describe('UserController', () => {
+  beforeEach(() => {
+    res.status = jest.fn().mockReturnThis();
+    res.json = jest.fn().mockReturnValue(res);
+    res.status(500).json = jest.fn().mockReturnValue(res);
   });
 
-  it('should return an error with status 500 if no users found', async () => {
-    const mockReq = {};
-    const mockRes = jest.fn().mockReturnThis();
-    const mockNext = jest.fn();
-
-    await getUsers(mockReq, mockRes, mockNext);
-
-    expect(mockRes.status).toHaveBeenCalledTimes(1);
-    expect(mockRes.status).toHaveBeenCalledWith(500);
+  afterEach(() => {
+    req.mockReset();
+    res.mockReset();
+    next.mockReset();
   });
 
-  it('should call next() if no error', async () => {
-    const mockReq = {};
-    const mockRes = jest.fn().mockReturnThis();
-    const mockNext = jest.fn();
+  it('should return users on successful request', async () => {
+    const users = [
+      { id: 1, name: 'John Doe' },
+      { id: 2, name: 'Jane Doe' },
+    ];
 
-    await getUsers(mockReq, mockRes, mockNext);
+    req.body = {};
+    req.query = {};
 
-    expect(mockNext).toHaveBeenCalledTimes(1);
+    await UserController.getUsers(req, res);
+
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledTimes(1);
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      message: 'Users fetched successfully',
+      data: users,
+    });
   });
 
-  it('should throw an error if req object is missing', () => {
-    expect(() => getUsers(undefined)).toThrowError(
-      'req object is required'
-    );
+  it('should return error on database fetch failure', async () => {
+    const error = new Error('Mock Database Fetch Failure');
+
+    req.body = {};
+    req.query = {};
+
+    UserController.getUsers.mockImplementationOnce(async () => {
+      throw error;
+    });
+
+    await UserController.getUsers(req, res);
+
+    expect(res.status).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledTimes(1);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'Failed to fetch users',
+      error: String(error),
+    });
+  });
+
+  it('should return error if req or res is not defined', () => {
+    UserController.getUsers.mockImplementationOnce(() => {});
+
+    expect(() => UserController.getUsers(undefined, res)).toThrowError();
+    expect(() => UserController.getUsers(req, undefined)).toThrowError();
   });
 });
