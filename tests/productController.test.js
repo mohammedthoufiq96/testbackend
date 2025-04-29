@@ -1,54 +1,105 @@
 // tests/productController.test.js
 
-const { getProducts } = require('../controllers/productController');
+const productController = require('../controllers/productController');
+const { jest } = require('jest');
 
-describe('Product Controller', () => {
+describe('productController', () => {
   describe('getProducts function', () => {
-    let req;
-    let res;
-    let next;
-
-    beforeEach(() => {
+    beforeAll(() => {
+      // Mock req, res, next using jest.fn()
       req = jest.fn();
       res = jest.fn();
       next = jest.fn();
-
-      // Mock database service
-      const dbServiceMock = require('../mocks/database.mock.js');
-      delete require.cache[require.resolve('../controllers/productController')];
-      require('../controllers/productController');
-
-      // Reset mock functions
-      req.resetMocks();
-      res.resetMocks();
-      next.resetMocks();
-
-      getProducts(req, res, next);
     });
 
-    it('should return products successfully', async () => {
-      const expectedResponse = [
-        { id: 1, name: 'John Doe' },
-        { id: 2, name: 'Jane Doe' },
-      ];
-
-      req.execute.mockResolvedValueOnce(expectedResponse);
-
-      await getProducts(req, res, next);
-      expect(res.status).toHaveBeenCalledTimes(1);
-      expect(res.json).toHaveBeenCalledTimes(1);
+    afterAll(() => {
+      jest.clearAllMocks();
     });
 
-    it('should return error message on failure', async () => {
-      const expectedError = new Error('Test error');
-      req.execute.mockRejectedValueOnce(expectedError);
+    it('should return success status and products on successful fetch', async () => {
+      const expectedResponse = {
+        status: jest.fn(),
+        json: jest.fn(),
+        end: jest.fn(),
+      };
 
-      await getProducts(req, res, next);
+      res.status.mockReturnThis(expectedResponse);
+      res.json.mockReturnThis(expectedResponse);
+
+      await productController.getProducts(req, res);
+
       expect(res.status).toHaveBeenCalledTimes(1);
+      expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledTimes(1);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Products fetched successfully',
+        data: expect.any(Array),
+      });
+    });
+
+    it('should return error status and failure message on fetch failure', async () => {
+      const errorMock = new Error('Test Error');
+      req.on('error', () => errorMock);
+
+      const expectedResponse = {
+        status: jest.fn(),
+        json: jest.fn(),
+        end: jest.fn(),
+      };
+
+      res.status.mockReturnThis(expectedResponse);
+      res.json.mockReturnThis(expectedResponse);
+
+      await productController.getProducts(req, res);
+
+      expect(res.status).toHaveBeenCalledTimes(1);
       expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledTimes(1);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Failed to fetch products',
+        error: 'Test Error',
+      });
+    });
+
+    it('should call next on successful fetch', async () => {
+      const expectedResponse = {
+        status: jest.fn(),
+        json: jest.fn(),
+        end: jest.fn(),
+      };
+
+      res.status.mockReturnThis(expectedResponse);
+      res.json.mockReturnThis(expectedResponse);
+
+      await productController.getProducts(req, res);
+
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call next on fetch failure', async () => {
+      const errorMock = new Error('Test Error');
+      req.on('error', () => errorMock);
+
+      const expectedResponse = {
+        status: jest.fn(),
+        json: jest.fn(),
+        end: jest.fn(),
+      };
+
+      res.status.mockReturnThis(expectedResponse);
+      res.json.mockReturnThis(expectedResponse);
+
+      await productController.getProducts(req, res);
+
+      expect(next).toHaveBeenCalledTimes(1);
     });
   });
 
-  // Additional tests...
+  describe('import test', () => {
+    it('should import productController correctly', () => {
+      expect(productController).toBeInstanceOf(Function);
+    });
+  });
 });

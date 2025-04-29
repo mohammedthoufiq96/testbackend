@@ -1,33 +1,35 @@
 // tests/controllers/userController.test.js
 
 const UserController = require('../controllers/userController');
-const req = jest.fn();
-const res = jest.fn();
-const next = jest.fn();
 
 describe('UserController', () => {
+  const req = jest.fn();
+  const res = jest.fn();
+  const next = jest.fn();
+
   beforeEach(() => {
+    req.user = null;
     res.status = jest.fn().mockReturnThis();
-    res.json = jest.fn().mockReturnValue(res);
-    res.status(500).json = jest.fn().mockReturnValue(res);
+    res.json = jest.fn().mockReturnThis();
+    res.status(500).json = jest.fn().mockReturnThis();
+    next.mockClear();
   });
 
   afterEach(() => {
-    req.mockReset();
-    res.mockReset();
-    next.mockReset();
+    req.resetAll();
+    res.resetAll();
+    next.resetAll();
   });
 
-  it('should return users on successful request', async () => {
-    const users = [
+  it('should return users data when fetching succeeds', async () => {
+    const userData = [
       { id: 1, name: 'John Doe' },
       { id: 2, name: 'Jane Doe' },
     ];
 
-    req.body = {};
-    req.query = {};
+    jest.spyOn(req, 'user').mockReturnValue(userData);
 
-    await UserController.getUsers(req, res);
+    await UserController.getUsers(req, res, next);
 
     expect(res.status).toHaveBeenCalledTimes(1);
     expect(res.status).toHaveBeenCalledWith(200);
@@ -35,21 +37,17 @@ describe('UserController', () => {
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       message: 'Users fetched successfully',
-      data: users,
+      data: userData,
     });
   });
 
-  it('should return error on database fetch failure', async () => {
-    const error = new Error('Mock Database Fetch Failure');
+  it('should return error when fetching fails', async () => {
+    const error = new Error('Mock database error');
 
-    req.body = {};
-    req.query = {};
+    jest.spyOn(req, 'user').mockReturnValue(null);
+    jest.spyOn(UserController.database, 'fetchUsers').mockThrow(error);
 
-    UserController.getUsers.mockImplementationOnce(async () => {
-      throw error;
-    });
-
-    await UserController.getUsers(req, res);
+    await UserController.getUsers(req, res, next);
 
     expect(res.status).toHaveBeenCalledTimes(1);
     expect(res.status).toHaveBeenCalledWith(500);
@@ -61,10 +59,9 @@ describe('UserController', () => {
     });
   });
 
-  it('should return error if req or res is not defined', () => {
-    UserController.getUsers.mockImplementationOnce(() => {});
+  it('should call next when no user data is provided', async () => {
+    await UserController.getUsers(req, res, next);
 
-    expect(() => UserController.getUsers(undefined, res)).toThrowError();
-    expect(() => UserController.getUsers(req, undefined)).toThrowError();
+    expect(next).toHaveBeenCalledTimes(1);
   });
 });
